@@ -1,0 +1,20 @@
+{
+  "name": "bull-test",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^4.17.21",
+    "@types/nunjucks": "^3.2.6",
+    "@types/yargs": "^17.0.32"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@bull-board/express": "^5.15.3",
+    "bullmq": "^5.5.2",
+    "express": "^4.19.2",
+    "nunjucks": "^3.2.4"
+  }
+}
