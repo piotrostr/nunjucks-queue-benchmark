@@ -12,7 +12,9 @@ program
   .option("-r, --render", "Render templates")
   .parse(process.argv);
 
-const runWorker = (njkService: NjkService) => {
+let total = 0;
+
+const runWorker = (njkService: NjkService, concurrency: number) => {
   const worker = new Worker(
     "render",
     async (_) => {
@@ -23,12 +25,12 @@ const runWorker = (njkService: NjkService) => {
         host: "localhost",
         port: 6379,
       },
-      concurrency: 300,
+      concurrency,
     }
   );
 
   worker.on("completed", (job) => {
-    console.log(`Job ${job.id} completed`);
+    console.log(`Job ${job.id} completed, total: ${total++}`);
   });
   worker.on("failed", (job, err) => {
     console.log(`Job ${job!.id} failed with ${err.message}`);
@@ -44,18 +46,20 @@ const main = async () => {
 
   const { renderQueue: queue, queueEvents } = newQueue();
 
+  const numRenders = 300;
+  const numEpochs = 10;
+  const concurrency = 60;
+
   if (options.bullboard) {
     runBullBoard(queue);
   }
 
   if (options.worker) {
     const njkService = new NjkService(queue, queueEvents);
-    runWorker(njkService);
+    runWorker(njkService, concurrency);
   }
 
   if (options.render) {
-    const numRenders = 300;
-    const numEpochs = 10;
     const renderTimes: { [key: string]: Array<number> } = {
       renderQueue: [],
       renderSingleThreaded: [],
@@ -64,23 +68,19 @@ const main = async () => {
     for (let i = 0; i < numEpochs; i++) {
       const njkService = new NjkService(queue, queueEvents);
 
-      const queueStart = Date.now();
       const promises = [];
       for (let i = 0; i < numRenders; i++) {
         promises.push(njkService.renderString());
       }
-      // console.debug(`scheduling ${numRenders} jobs`);
-
+      console.log(`scheduling ${numRenders} jobs`);
+      const queueStart = Date.now();
       await Promise.all(promises);
-
       const queueEnd = Date.now();
 
       const singleThreadedStart = Date.now();
-
       for (let i = 0; i < numRenders; i++) {
         njkService._renderString();
       }
-
       const singleThreadedEnd = Date.now();
 
       renderTimes.renderQueue.push(queueEnd - queueStart);
@@ -94,10 +94,10 @@ const main = async () => {
 
     console.log(
       `Average time taken for ${numEpochs} runs with ${numRenders} renders:\n
-        - Queue: ${mean(renderTimes.renderQueue)}ms\n
-        - Single Threaded: ${mean(renderTimes.renderSingleThreaded)}ms`
+      Queue: ${mean(renderTimes.renderQueue)}ms
+      Single threaded: ${mean(renderTimes.renderSingleThreaded)}ms`
     );
-
+    console.log(renderTimes.renderQueue, renderTimes.renderSingleThreaded);
     process.exit(0);
   }
 };
