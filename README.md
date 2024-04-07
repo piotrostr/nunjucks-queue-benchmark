@@ -48,6 +48,9 @@ overhead and there might be retries which could deteriorate performance
   to benefit from the parallelism
 - run profiling in staging to ensure performance improvement holds for the
   production workload
+- the `renderString` calls that render larger precompiled templates have to be
+  distributed, while the 'smaller' calls that render a configuration curly brace
+  should remain to run on a single thread
 
 ## Usage
 
